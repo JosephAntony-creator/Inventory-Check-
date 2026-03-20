@@ -1,0 +1,39 @@
+import streamlit as st
+import pandas as pd
+
+st.title("📦 Inventory Location Checker")
+
+uploaded_file = st.file_uploader("Upload Excel File", type=["xlsx"])
+
+if uploaded_file:
+    df = pd.read_excel(uploaded_file)
+
+    st.success("File uploaded successfully")
+
+    location = st.text_input("Enter Location")
+
+    if location:
+        filtered = df[df["Location"] == location]
+
+        if filtered.empty:
+            st.warning("No data found for this location")
+        else:
+            st.subheader(f"Location: {location}")
+
+            filtered = filtered.copy()
+            filtered["Counted Qty"] = 0
+
+            edited = st.data_editor(filtered, num_rows="dynamic")
+
+            if st.button("Save Counts"):
+                edited["Variance"] = edited["Counted Qty"] - edited["Qty"]
+                st.session_state["data"] = edited
+                st.success("Saved!")
+
+    if "data" in st.session_state:
+        if st.button("Download Report"):
+            report = st.session_state["data"].groupby("StockCode").sum().reset_index()
+            report.to_excel("report.xlsx", index=False)
+
+            with open("report.xlsx", "rb") as f:
+                st.download_button("Download Excel", f, file_name="report.xlsx")
